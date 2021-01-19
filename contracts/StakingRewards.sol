@@ -1,14 +1,14 @@
 pragma solidity ^0.5.16;
 
-import "openzeppelin-solidity-2.3.0/contracts/math/Math.sol";
-import "openzeppelin-solidity-2.3.0/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity-2.3.0/contracts/token/ERC20/ERC20Detailed.sol";
-import "openzeppelin-solidity-2.3.0/contracts/token/ERC20/SafeERC20.sol";
-import "openzeppelin-solidity-2.3.0/contracts/utils/ReentrancyGuard.sol";
+import 'openzeppelin-solidity-2.3.0/contracts/math/Math.sol';
+import 'openzeppelin-solidity-2.3.0/contracts/math/SafeMath.sol';
+import 'openzeppelin-solidity-2.3.0/contracts/token/ERC20/ERC20Detailed.sol';
+import 'openzeppelin-solidity-2.3.0/contracts/token/ERC20/SafeERC20.sol';
+import 'openzeppelin-solidity-2.3.0/contracts/utils/ReentrancyGuard.sol';
 
 // Inheritance
-import "./interfaces/IStakingRewards.sol";
-import "./RewardsDistributionRecipient.sol";
+import './interfaces/IStakingRewards.sol';
+import './RewardsDistributionRecipient.sol';
 
 contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, ReentrancyGuard {
     using SafeMath for uint256;
@@ -67,7 +67,10 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function earned(address account) public view returns (uint256) {
-        return _balances[account].mul(rewardPerToken().sub(userRewardPerTokenPaid[account])).div(1e18).add(rewards[account]);
+        return
+            _balances[account].mul(rewardPerToken().sub(userRewardPerTokenPaid[account])).div(1e18).add(
+                rewards[account]
+            );
     }
 
     function getRewardForDuration() external view returns (uint256) {
@@ -76,20 +79,26 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function stakeWithPermit(uint256 amount, uint deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant updateReward(msg.sender) {
-        require(amount > 0, "Cannot stake 0");
+    function stakeWithPermit(
+        uint256 amount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external nonReentrant updateReward(msg.sender) {
+        require(amount > 0, 'Cannot stake 0');
         _totalSupply = _totalSupply.add(amount);
         _balances[msg.sender] = _balances[msg.sender].add(amount);
 
         // permit
-        IUniswapV2ERC20(address(stakingToken)).permit(msg.sender, address(this), amount, deadline, v, r, s);
+        IPyladesERC20(address(stakingToken)).permit(msg.sender, address(this), amount, deadline, v, r, s);
 
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
         emit Staked(msg.sender, amount);
     }
 
     function stake(uint256 amount) external nonReentrant updateReward(msg.sender) {
-        require(amount > 0, "Cannot stake 0");
+        require(amount > 0, 'Cannot stake 0');
         _totalSupply = _totalSupply.add(amount);
         _balances[msg.sender] = _balances[msg.sender].add(amount);
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -97,7 +106,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function withdraw(uint256 amount) public nonReentrant updateReward(msg.sender) {
-        require(amount > 0, "Cannot withdraw 0");
+        require(amount > 0, 'Cannot withdraw 0');
         _totalSupply = _totalSupply.sub(amount);
         _balances[msg.sender] = _balances[msg.sender].sub(amount);
         stakingToken.safeTransfer(msg.sender, amount);
@@ -133,8 +142,8 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         // This keeps the reward rate in the right range, preventing overflows due to
         // very high values of rewardRate in the earned and rewardsPerToken functions;
         // Reward + leftover must be less than 2^256 / 10^18 to avoid overflow.
-        uint balance = rewardsToken.balanceOf(address(this));
-        require(rewardRate <= balance.div(rewardsDuration), "Provided reward too high");
+        uint256 balance = rewardsToken.balanceOf(address(this));
+        require(rewardRate <= balance.div(rewardsDuration), 'Provided reward too high');
 
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(rewardsDuration);
@@ -161,6 +170,14 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     event RewardPaid(address indexed user, uint256 reward);
 }
 
-interface IUniswapV2ERC20 {
-    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external;
+interface IPyladesERC20 {
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
 }
